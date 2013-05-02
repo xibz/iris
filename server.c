@@ -6,9 +6,9 @@
 #include <string.h>
 #include "list.h"
 #include <pthread.h>
-void runServer();
+void runServer(char *);
 
-void runServer()
+void runServer(char *portStr)
 {
   List l = {NULL, NULL};
 }
