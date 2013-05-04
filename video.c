@@ -1,6 +1,6 @@
+#include "video.h"
 #include <vorbis/codec.h>
 #include <vorbis/vorbisfile.h>
-void handleVideo(const unsigned char []);
 /*
 * Handles video streaming data
 */
