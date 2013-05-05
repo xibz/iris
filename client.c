@@ -7,25 +7,16 @@
 #include <unistd.h>
 #include <string.h>
 #include <netdb.h>
-
-#define ANSI_COLOR_RED     "\x1b[31m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_YELLOW  "\x1b[33m"
-#define ANSI_COLOR_BLUE    "\x1b[34m"
-#define ANSI_COLOR_MAGENTA "\x1b[35m"
-#define ANSI_COLOR_CYAN    "\x1b[36m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
-
-#define SET_RED(x)      ANSI_COLOR_RED      x ANSI_COLOR_RESET
-#define SET_GREEN(x)    ANSI_COLOR_GREEN    x ANSI_COLOR_RESET
-#define SET_YELLOW(x)   ANSI_COLOR_YELLOW   x ANSI_COLOR_RESET
-#define SET_BLUE(x)     ANSI_COLOR_BLUE     x ANSI_COLOR_RESET
-#define SET_MAGENTA(x)  ANSI_COLOR_MAGENTA  x ANSI_COLOR_RESET
-#define SET_CYAN(x)     ANSI_COLOR_CYAN     x ANSI_COLOR_RESET
+#include "color_print.h"
 
 #define MSGSIZE 4096
+#define FILESIZE 1048576
+#define MAXSIZE 1052672 //MSGSIZE + FILESIZE
 
 #define NIPQUAD(addr) ((unsigned char *)&addr)[0], ((unsigned char *)&addr)[1], ((unsigned char *)&addr)[2], ((unsigned char *)&addr)[3]
+
+void removeSubstring(char *, const char *);
+void removeAllSubstring(char *, const char *);
 
 int main(int argc, char *argv[])
 {
@@ -46,20 +37,107 @@ int main(int argc, char *argv[])
         else {
             inet_ntop(AF_INET, &(address.sin_addr), str, INET_ADDRSTRLEN);
             printf(SET_GREEN("Connection established with Server: %s\n"), str);
-            while ( 1 )
-            {
-                printf("Input:\n");
-                bzero(msg, MSGSIZE);
-                if ( fgets(msg, MSGSIZE, stdin) )
+            bzero(msg, MSGSIZE);
+            sprintf(msg, "CLIENT");
+            write(sockfd, msg, strlen(msg));
+            if ( !fork() )
+            {   // writing to the server
+                while ( 1 )
                 {
-                    msg[strlen(msg)-1] = '\0';
-                    //whatever you want to do with the msg
-                    write(sockfd, msg, strlen(msg));
+                    bzero(msg, MSGSIZE);
+                    if ( fgets(msg, MSGSIZE, stdin) )
+                    {
+                        printf(SET_CYAN("Input:%s"), msg);
+                        if ( strcasestr(msg, "FILE") )
+                        {
+                            FILE *fp;
+                            char ext[5], fname[50], tmp[MSGSIZE], file_content[MAXSIZE];
+                            strcpy(tmp, msg);
+                            removeSubstring(tmp, "FILE");
+                            removeSubstring(tmp, "file");
+                            strcpy(ext, strtok(tmp, " "));
+                            strcpy(fname, strtok(NULL, " \n"));
+                            if ( !access(fname, F_OK) )
+                            {
+                                if ( !(fp = fopen(fname, "r")) ) printf(SET_RED("Error creating the file: %s\n"), fname);
+                                else {
+                                    strncpy(file_content, msg, strlen(msg)-1);
+                                    sprintf(file_content, "%s CONTENT:", file_content);
+                                    printf("total len B:%ld\n", strlen(file_content));
+                                    fread(file_content+strlen(file_content), 1, sizeof(char) * FILESIZE, fp);
+                                    printf("total len A:%ld\n", strlen(file_content));
+                                    write(sockfd, file_content, strlen(file_content));
+                                    fclose(fp);
+                                }
+                            }
+                        } else write(sockfd, msg, strlen(msg));
+                    }
+                    if ( strcasestr(msg, "EXIT") ) break; else bzero(msg, MSGSIZE);
                 }
-                if ( strcasestr(msg, "EXIT") || strcasestr(msg, "exit") ) break; else bzero(msg, MSGSIZE);
+            } else {
+                // reading from the server
+                char msg[MAXSIZE];
+                while ( 1 )
+                {
+                    bzero(msg, MAXSIZE);
+                    if ( read(sockfd, msg, MAXSIZE) )
+                    {
+                        printf("recv len:%ld\n", strlen(msg));
+                        if ( strcasestr(msg, "FILE") )
+                        { // Sending files of size < 1MB & 40 characters or less in filename
+                            FILE *fp;
+                            char ext[5], fname[50], file_content[MAXSIZE];
+                            removeSubstring(msg, "FILE ");
+                            removeSubstring(msg, "file ");
+                            strcpy(file_content, msg);
+                            strcpy(ext, strtok(msg, " "));
+                            removeSubstring(file_content, ext);
+                            removeSubstring(file_content, " ");
+                            printf("ext:%s|\n", ext);
+                            strcpy(fname, strtok(NULL, " CONTENT:"));
+                            removeSubstring(file_content, fname);
+                            removeSubstring(file_content, " ");
+                            printf("fname:%s|\n", fname);
+                            removeSubstring(file_content, "CONTENT:");
+                            printf("content len:%ld\n", strlen(file_content));
+                            if ( !access(fname, F_OK) )
+                            {
+                                removeSubstring(fname, ".");
+                                removeSubstring(fname, ext);
+                                sprintf(fname, "%s_tmp.%s", fname, ext);
+                                if ( !(fp = fopen(fname, "w")) ) printf(SET_RED("Error creating the file: %s\n"), fname);
+                                else {
+                                    fwrite(file_content, 1, strlen(file_content), fp);
+                                    fclose(fp);
+                                }
+                            } else {
+                                if ( !(fp = fopen(fname, "w")) ) printf(SET_RED("Error creating the file: %s\n"), fname);
+                                else {
+                                    fwrite(file_content, 1, strlen(file_content), fp);
+                                    fclose(fp);
+                                }
+                            }
+                        } else if ( !strcasecmp(msg, "VID") ) {
+                            // Handle video feed here....
+                        } else { // all the rest are messages
+                            printf("%s%s%s", ANSI_COLOR_RED, msg, ANSI_COLOR_RESET);
+                        }
+                    }
+                }
             }
             close(sockfd); 
         }
     }
     return 1;
 }
+
+void removeAllSubstring(char *s, const char *toremove)
+{ // remove substring from the string
+    while( (s = strstr(s, toremove)) ) memmove(s, (s + strlen(toremove)), (1 + strlen(s + strlen(toremove))));
+}
+
+void removeSubstring(char *s, const char *toremove)
+{ // remove substring from the string
+    if ( (s = strstr(s, toremove)) ) memmove(s, (s + strlen(toremove)), (1 + strlen(s + strlen(toremove))));
+}
+
