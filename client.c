@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -8,10 +9,9 @@
 #include <string.h>
 #include <netdb.h>
 #include "color_print.h"
+#include <math.h>
 
-#define MSGSIZE 4096
-#define FILESIZE 1048576
-#define MAXSIZE 1052672 //MSGSIZE + FILESIZE
+#define MSGSIZE 2048
 
 #define NIPQUAD(addr) ((unsigned char *)&addr)[0], ((unsigned char *)&addr)[1], ((unsigned char *)&addr)[2], ((unsigned char *)&addr)[3]
 
@@ -51,22 +51,31 @@ int main(int argc, char *argv[])
                         if ( strcasestr(msg, "FILE") )
                         {
                             FILE *fp;
-                            char ext[5], fname[50], tmp[MSGSIZE], file_content[MAXSIZE];
+                            struct stat file_stat;
+                            char ext[5], fname[50], tmp[MSGSIZE], file_content[MSGSIZE];
                             strcpy(tmp, msg);
                             removeSubstring(tmp, "FILE");
                             removeSubstring(tmp, "file");
                             strcpy(ext, strtok(tmp, " "));
                             strcpy(fname, strtok(NULL, " \n"));
+                            fname[strlen(fname)]='\0';
                             if ( !access(fname, F_OK) )
                             {
                                 if ( !(fp = fopen(fname, "r")) ) printf(SET_RED("Error creating the file: %s\n"), fname);
                                 else {
-                                    strncpy(file_content, msg, strlen(msg)-1);
-                                    sprintf(file_content, "%s CONTENT:", file_content);
-                                    printf("total len B:%ld\n", strlen(file_content));
-                                    fread(file_content+strlen(file_content), 1, sizeof(char) * FILESIZE, fp);
-                                    printf("total len A:%ld\n", strlen(file_content));
-                                    write(sockfd, file_content, strlen(file_content));
+                                    stat(fname, &file_stat);
+                                    int block_send = (int)ceil(file_stat.st_size/1024.0);
+                                    strcpy(msg, strtok(msg, "\n"));
+                                    sprintf(msg, "%s %d", msg, block_send);
+                                    write(sockfd, msg, strlen(msg));
+                                    bzero(file_content, MSGSIZE);
+                                    while ( block_send )
+                                    {
+                                        fread(file_content, 1, 1024, fp);
+                                        send(sockfd, file_content, strlen(file_content), 0); //write(sockfd, file_content, strlen(file_content));
+                                        bzero(file_content, MSGSIZE);
+                                        block_send = block_send - 1;
+                                    }
                                     fclose(fp);
                                 }
                             }
@@ -76,52 +85,44 @@ int main(int argc, char *argv[])
                 }
             } else {
                 // reading from the server
-                char msg[MAXSIZE];
+                char msg[MSGSIZE];
                 while ( 1 )
                 {
-                    bzero(msg, MAXSIZE);
-                    if ( read(sockfd, msg, MAXSIZE) )
-                    {
-                        printf("recv len:%ld\n", strlen(msg));
-                        if ( strcasestr(msg, "FILE") )
-                        { // Sending files of size < 1MB & 40 characters or less in filename
-                            FILE *fp;
-                            char ext[5], fname[50], file_content[MAXSIZE];
-                            removeSubstring(msg, "FILE ");
-                            removeSubstring(msg, "file ");
-                            strcpy(file_content, msg);
-                            strcpy(ext, strtok(msg, " "));
-                            removeSubstring(file_content, ext);
-                            removeSubstring(file_content, " ");
-                            printf("ext:%s|\n", ext);
-                            strcpy(fname, strtok(NULL, " CONTENT:"));
-                            removeSubstring(file_content, fname);
-                            removeSubstring(file_content, " ");
-                            printf("fname:%s|\n", fname);
-                            removeSubstring(file_content, "CONTENT:");
-                            printf("content len:%ld\n", strlen(file_content));
-                            if ( !access(fname, F_OK) )
-                            {
-                                removeSubstring(fname, ".");
-                                removeSubstring(fname, ext);
-                                sprintf(fname, "%s_tmp.%s", fname, ext);
-                                if ( !(fp = fopen(fname, "w")) ) printf(SET_RED("Error creating the file: %s\n"), fname);
-                                else {
-                                    fwrite(file_content, 1, strlen(file_content), fp);
-                                    fclose(fp);
-                                }
-                            } else {
-                                if ( !(fp = fopen(fname, "w")) ) printf(SET_RED("Error creating the file: %s\n"), fname);
-                                else {
-                                    fwrite(file_content, 1, strlen(file_content), fp);
-                                    fclose(fp);
-                                }
-                            }
-                        } else if ( !strcasecmp(msg, "VID") ) {
-                            // Handle video feed here....
-                        } else { // all the rest are messages
-                            printf("%s%s%s", ANSI_COLOR_RED, msg, ANSI_COLOR_RESET);
+                    bzero(msg, MSGSIZE);
+                    read(sockfd, msg, MSGSIZE);                    
+                    if ( strcasestr(msg, "FILE") )
+                    { // Sending files of size < 1MB & 40 characters or less in filename
+                        FILE *fp;
+                        char ext[5], fname[50];
+                        removeSubstring(msg, "FILE ");
+                        removeSubstring(msg, "file ");
+                        strcpy(ext, strtok(msg, " "));
+                        strcpy(fname, strtok(NULL, " "));
+                        int blocks = atoi(strtok(NULL, " \n"));
+                        if ( !access(fname, F_OK) )
+                        {
+                            removeSubstring(fname, ".");
+                            removeSubstring(fname, ext);
+                            sprintf(fname, "%s_tmp.%s", fname, ext);
+                            if ( !(fp = fopen(fname, "w")) ) printf(SET_RED("Error creating the file: %s\n"), fname);
+                        } else {
+                            if ( !(fp = fopen(fname, "w")) ) printf(SET_RED("Error creating the file: %s\n"), fname);
                         }
+                        if ( fp )
+                        {
+                            while ( blocks )
+                            {
+                                bzero(msg, MSGSIZE);
+                                recv(sockfd, msg, MSGSIZE, 0); //read(sockfd, msg, MSGSIZE);
+                                fprintf(fp, "%s", msg);
+                                blocks = blocks - 1;
+                            }
+                            fclose(fp);
+                        }
+                    } else if ( !strcasecmp(msg, "VID") ) {
+                        // Handle video feed here....
+                    } else { // all the rest are messages
+                        printf("%s%s%s", ANSI_COLOR_RED, msg, ANSI_COLOR_RESET);
                     }
                 }
             }
