@@ -9,13 +9,14 @@
 #include <pthread.h>
 #include <netdb.h>
 #include <pthread.h>
-#include "video.h"
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
+#include "video.h"
+#define DBG 0
 /*
 * Handles video streaming data
 */
-void handleVideo(const unsigned char stream[])
+void handleVideo(unsigned char stream[])
 {
   CvCapture *capture = cvCaptureFromCAM(CV_CAP_ANY);
   if(!capture)
@@ -58,15 +59,14 @@ void sendFrames(const int *cfd, IplImage *frame[])
     f[i] = *frame[i];
     free(frame[i]);
   }
-  send(cfd, f, sizeof(IplImage)*FRAMEMAX); 
+  send(*cfd, f, sizeof(IplImage)*FRAMEMAX, 0);
 }
 
 inline void recvFrames(const int *cfd, IplImage frame[])
 {
-  recv(cfd, frame, sizeof(IplImage)*FRAMEMAX);
+  recv(*cfd, frame, sizeof(IplImage)*FRAMEMAX, 0);
 }
 
-int main(int argc, char *argv[])
-{
-  return 0;
-}
+#ifdef DBG
+#include "dbg.c"
+#endif
