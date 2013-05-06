@@ -5,6 +5,7 @@ typedef struct Chatbox
 {
   GtkWidget *table;
   GtkWidget *text;
+  GtkWidget *display;
 }Chatbox;
 void initChatbox(Chatbox *);
 #endif
