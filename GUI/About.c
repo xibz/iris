@@ -8,7 +8,7 @@ void showAbout(GtkWidget *w, gpointer window)
             GTK_BUTTONS_OK,
             "\n                          iRis\n\n"
             "                         2013\n"
-            "                          1.1\n\n"
+            "                         v 1.1\n\n"
             "A chat and video messaging system.                \n\n"
             "                   Daniel Cauley\n"
             "                    Ben Powell\n"

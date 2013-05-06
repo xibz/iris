@@ -5,7 +5,7 @@ CC=gcc
 all: iRis
 
 iRis: Menubar.o chatBox.o About.o irisGui.o
-	$(CC) Menubar.o chatBox.o About.o irisGui.o -o iRis.o $(LIBS)
+	$(CC) Menubar.o chatBox.o About.o irisGui.o -o iRis $(LIBS)
 
 Menubar.o: Menubar.c
 	$(CC) $(CFLAGS) Menubar.c $(LIBS)
