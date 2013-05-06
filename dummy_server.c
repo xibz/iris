@@ -125,7 +125,8 @@ void start_server()
                         char msg[MSGSIZE];
                         bzero(msg, MSGSIZE);
                         read(in_sockfd, msg, MSGSIZE);
-                        
+                        printf("recv1:%ld\n", strlen(msg));
+
                         char str[INET_ADDRSTRLEN];
                         inet_ntop(AF_INET, &(in_addr.sin_addr), str, INET_ADDRSTRLEN);
                         if ( !strcasecmp(msg, "CLIENT") )
@@ -157,28 +158,37 @@ void handle_request_client(int sockfd, char *addr)
         bzero(msg, MSGSIZE);
         printf(SET_BLUE("Waiting for incoming msg from Client at %s...\n"), addr);
         if ( !read(sockfd, msg, MSGSIZE) ) break;
-
+        printf("recv2:%ld\n", strlen(msg));
         if ( strstr(msg, "EXIT") || strstr(msg, "exit") )
         {
             bzero(msg, MSGSIZE);
             sprintf(msg, "Connection terminated with server %s", addr);
             write(sockfd, msg, strlen(msg));
+            printf("send1:%ld\n", strlen(msg));
             break;
         } else if ( strstr(msg, "FILE") ) {
             char s[MSGSIZE];
             int blocks=0;
             write(sockfd, msg, strlen(msg));
+            printf("send2:%ld\n", strlen(msg));
             strcpy(s, strtok(msg, " "));        // FILE
             strcpy(s, strtok(NULL, " "));       // ext
             strcpy(s, strtok(NULL, " \n"));     // file name
             blocks = atoi(strtok(NULL, " "));   // blocks
+            int nbr=0, nbs=0;
             while ( blocks )
             {
-                recv(sockfd, msg, MSGSIZE, 0);      //read(sockfd, msg, MSGSIZE);
-                send(sockfd, msg, strlen(msg), 0);  //write(sockfd, msg, strlen(msg));
-                bzero(msg, MSGSIZE);
+                memset(msg, '\0', MSGSIZE);
+                //recvfrom(sockfd, msg, MSGSIZE, 0, (struct sockaddr *)&in_addr, (socklen_t *)sizeof(in_addr));
+                while ( (nbr = recv(sockfd, msg, 1448, 0)) != 1448 && (blocks-1) ) printf(SET_MAGENTA("%d - %s\n"), blocks, msg);      //read(sockfd, msg, MSGSIZE);
+                printf("\t%d - recv3:%ld - %d | ", blocks, strlen(msg), nbr);
+                //sendto(sockfd, msg, strlen(msg), 0, (struct sockaddr *)&in_addr, sizeof(in_addr));
+                nbs = send(sockfd, msg, nbr, MSG_DONTROUTE);  //write(sockfd, msg, strlen(msg));
+                printf("send3:%ld - %d\n", strlen(msg), nbs);
+                //bzero(msg, MSGSIZE);
                 blocks = blocks - 1;
-            }            
+            }
+            printf(SET_CYAN("%s\n"), msg);
         }
     }    
     close(sockfd);

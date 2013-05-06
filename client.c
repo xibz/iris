@@ -40,6 +40,7 @@ int main(int argc, char *argv[])
             bzero(msg, MSGSIZE);
             sprintf(msg, "CLIENT");
             write(sockfd, msg, strlen(msg));
+            printf("sent1:%ld\n", strlen(msg));
             if ( !fork() )
             {   // writing to the server
                 while ( 1 )
@@ -64,22 +65,35 @@ int main(int argc, char *argv[])
                                 if ( !(fp = fopen(fname, "r")) ) printf(SET_RED("Error creating the file: %s\n"), fname);
                                 else {
                                     stat(fname, &file_stat);
-                                    int block_send = (int)ceil(file_stat.st_size/1024.0);
+                                    int block_send = (int)ceil(file_stat.st_size/1448.0);
                                     strcpy(msg, strtok(msg, "\n"));
                                     sprintf(msg, "%s %d", msg, block_send);
                                     write(sockfd, msg, strlen(msg));
-                                    bzero(file_content, MSGSIZE);
+                                    printf("sent2:%ld\n", strlen(msg));
+                                    //bzero(file_content, MSGSIZE);
+                                    memset(msg, '\0', MSGSIZE);
+                                    memset(file_content, '\0', MSGSIZE);
+                                    int nbr=0, nbs=0;
                                     while ( block_send )
                                     {
-                                        fread(file_content, 1, 1024, fp);
-                                        send(sockfd, file_content, strlen(file_content), 0); //write(sockfd, file_content, strlen(file_content));
-                                        bzero(file_content, MSGSIZE);
+                                        memset(file_content, '\0', MSGSIZE);
+                                        //sprintf(file_content, "F#%s", file_content);
+                                        nbr = fread(file_content, 1, 1448, fp);
+                                        //sendto(sockfd, file_content, strlen(file_content), 0, (struct sockaddr *)&address, sizeof(address));
+                                        nbs = send(sockfd, file_content, nbr, MSG_DONTROUTE); //write(sockfd, file_content, strlen(file_content));
+                                        printf("\t%d sent3:%ld - %d - %d\n", block_send, strlen(file_content), nbr, nbs);
+                                        if ( block_send == 4 ) printf(SET_MAGENTA("%s\n"), file_content);
+                                        //bzero(file_content, MSGSIZE);
                                         block_send = block_send - 1;
                                     }
+                                    printf(SET_CYAN("%s\n"), file_content);
                                     fclose(fp);
                                 }
                             }
-                        } else write(sockfd, msg, strlen(msg));
+                        } else {
+                            write(sockfd, msg, strlen(msg));
+                            printf("sent4:%ld\n", strlen(msg));
+                        }
                     }
                     if ( strcasestr(msg, "EXIT") ) break; else bzero(msg, MSGSIZE);
                 }
@@ -89,7 +103,9 @@ int main(int argc, char *argv[])
                 while ( 1 )
                 {
                     bzero(msg, MSGSIZE);
-                    read(sockfd, msg, MSGSIZE);                    
+                    read(sockfd, msg, MSGSIZE);
+                    printf("recv1:%ld\n", strlen(msg));
+                    printf("%s\n", msg);
                     if ( strcasestr(msg, "FILE") )
                     { // Sending files of size < 1MB & 40 characters or less in filename
                         FILE *fp;
@@ -104,17 +120,21 @@ int main(int argc, char *argv[])
                             removeSubstring(fname, ".");
                             removeSubstring(fname, ext);
                             sprintf(fname, "%s_tmp.%s", fname, ext);
+                            if( remove(fname) != 0 ) perror("Error deleting file"); else puts("File successfully deleted");
                             if ( !(fp = fopen(fname, "w")) ) printf(SET_RED("Error creating the file: %s\n"), fname);
                         } else {
                             if ( !(fp = fopen(fname, "w")) ) printf(SET_RED("Error creating the file: %s\n"), fname);
                         }
                         if ( fp )
                         {
+                            int nbr=0, nbp=0;
+                            printf("blocks:%d\n", blocks);
                             while ( blocks )
                             {
-                                bzero(msg, MSGSIZE);
-                                recv(sockfd, msg, MSGSIZE, 0); //read(sockfd, msg, MSGSIZE);
-                                fprintf(fp, "%s", msg);
+                                memset(msg, '\0', MSGSIZE);
+                                nbr = recv(sockfd, msg, 1448, 0); //read(sockfd, msg, MSGSIZE);
+                                nbp = fprintf(fp, "%s", msg);
+                                printf("\t%d - recv2:%ld - %d - %d\n", blocks, strlen(msg), nbr, nbp); fflush(stdout);
                                 blocks = blocks - 1;
                             }
                             fclose(fp);
