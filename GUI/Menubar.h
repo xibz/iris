@@ -7,6 +7,7 @@ typedef struct Menubar
   GtkWidget *fileMenu;
   GtkWidget *helpMenu;
   GtkWidget *file;
+  GtkWidget *connect;
   GtkWidget *quit;
   GtkWidget *help;
   GtkWidget *about;
