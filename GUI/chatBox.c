@@ -12,9 +12,9 @@ void initChatbox(Chatbox *cbox)
   gtk_text_view_set_editable((GtkTextView *)cbox->text, TRUE);
   gtk_table_attach_defaults(GTK_TABLE(cbox->table), cbox->display,
                             0, 1, 0, 1);
-  gtk_table_attach_defaults(GTK_TABLE(cbox->table), cbox->userBox,
-                            1, 2, 0, 1);
   gtk_table_attach_defaults(GTK_TABLE(cbox->table), cbox->text,
                             0, 1, 1, 2);
+  gtk_table_attach_defaults(GTK_TABLE(cbox->table), cbox->userBox,
+                            1, 2, 0, 1);
   gtk_widget_set_size_request(cbox->display, 200, 400);
 }
