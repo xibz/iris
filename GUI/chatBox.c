@@ -15,7 +15,7 @@ void initChatbox(Chatbox *cbox)
   gtk_table_attach_defaults(GTK_TABLE(cbox->table), cbox->text,
                             0, 1, 1, 2);
   gtk_table_attach_defaults(GTK_TABLE(cbox->table), cbox->userBox,
-                            1, 2, 0, 1);
+                            1, 2, 0, 2);
   gtk_widget_set_size_request(cbox->display, 200, 400);
   gtk_widget_set_hexpand(cbox->display, TRUE);
   gtk_widget_set_hexpand(cbox->text, TRUE);
