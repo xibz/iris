@@ -4,6 +4,7 @@
 #include "Menubar.h"
 #include "chatBox.h"
 #include "About.h"
+#include "connectWindow.h"
 bool buttonPress(GtkWidget *, GdkEvent *);
 void menuItemResponse(char*);
 
@@ -30,6 +31,8 @@ int main(int argc, char *argv[])
   gtk_box_pack_start(GTK_BOX(vbox), mBar.menuBar, FALSE, FALSE, 3);
   gtk_box_pack_start(GTK_BOX(vbox), cbox.table, TRUE, TRUE, 0);
 
+  g_signal_connect(G_OBJECT(mBar.connect), "activate",
+    G_CALLBACK(newConnection), (gpointer)window);
   g_signal_connect_swapped(G_OBJECT(window), "destroy",
   G_CALLBACK(gtk_main_quit), NULL);
   g_signal_connect(G_OBJECT(mBar.quit), "activate",
