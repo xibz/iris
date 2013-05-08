@@ -13,6 +13,7 @@
 #include "color_print.h"
 
 #define MSGSIZE 2048
+#define FILEBUF 1448
 
 #define NIPQUAD(addr) ((unsigned char *)&addr)[0], ((unsigned char *)&addr)[1], ((unsigned char *)&addr)[2], ((unsigned char *)&addr)[3]
 
@@ -123,9 +124,8 @@ void start_server()
                         sprintf(ADDR, "%d.%d.%d.%d", NIPQUAD(my_addr.sin_addr.s_addr));
 
                         char msg[MSGSIZE];
-                        bzero(msg, MSGSIZE);
+                        memset(msg, '\0', MSGSIZE);
                         read(in_sockfd, msg, MSGSIZE);
-                        printf("recv1:%ld\n", strlen(msg));
 
                         char str[INET_ADDRSTRLEN];
                         inet_ntop(AF_INET, &(in_addr.sin_addr), str, INET_ADDRSTRLEN);
@@ -155,40 +155,35 @@ void handle_request_client(int sockfd, char *addr)
 
     while ( 1 )
     {
-        bzero(msg, MSGSIZE);
+        memset(msg, '\0', MSGSIZE);
         printf(SET_BLUE("Waiting for incoming msg from Client at %s...\n"), addr);
         if ( !read(sockfd, msg, MSGSIZE) ) break;
-        printf("recv2:%ld\n", strlen(msg));
         if ( strstr(msg, "EXIT") || strstr(msg, "exit") )
         {
-            bzero(msg, MSGSIZE);
-            sprintf(msg, "Connection terminated with server %s", addr);
+            memset(msg, '\0', MSGSIZE);
+            sprintf(msg, "EXIT Connection terminated with server %s", addr);
             write(sockfd, msg, strlen(msg));
-            printf("send1:%ld\n", strlen(msg));
             break;
         } else if ( strstr(msg, "FILE") ) {
-            char s[MSGSIZE];
-            int blocks=0;
+            char s[MSGSIZE], file_content[FILEBUF];
+            int total_bytes=0;
             write(sockfd, msg, strlen(msg));
-            printf("send2:%ld\n", strlen(msg));
             strcpy(s, strtok(msg, " "));        // FILE
             strcpy(s, strtok(NULL, " "));       // ext
-            strcpy(s, strtok(NULL, " \n"));     // file name
-            blocks = atoi(strtok(NULL, " "));   // blocks
-            int nbr=0, nbs=0;
-            while ( blocks )
+            strcpy(s, strtok(NULL, " "));       // file_name
+            total_bytes = atoi(strtok(NULL, " \n"));
+            memset(msg, '\0', MSGSIZE);
+            printf(SET_RED("Total bytes to transfer: %5d\n"), total_bytes);
+            int nbr=0, total_bytes_r=0, total_bytes_s=0;
+            while ( total_bytes_s < total_bytes )
             {
-                memset(msg, '\0', MSGSIZE);
-                //recvfrom(sockfd, msg, MSGSIZE, 0, (struct sockaddr *)&in_addr, (socklen_t *)sizeof(in_addr));
-                while ( (nbr = recv(sockfd, msg, 1448, 0)) != 1448 && (blocks-1) ) printf(SET_MAGENTA("%d - %s\n"), blocks, msg);      //read(sockfd, msg, MSGSIZE);
-                printf("\t%d - recv3:%ld - %d | ", blocks, strlen(msg), nbr);
-                //sendto(sockfd, msg, strlen(msg), 0, (struct sockaddr *)&in_addr, sizeof(in_addr));
-                nbs = send(sockfd, msg, nbr, MSG_DONTROUTE);  //write(sockfd, msg, strlen(msg));
-                printf("send3:%ld - %d\n", strlen(msg), nbs);
-                //bzero(msg, MSGSIZE);
-                blocks = blocks - 1;
+                memset(file_content, '\0', FILEBUF);
+                nbr = recv(sockfd, file_content, FILEBUF, MSG_DONTROUTE);
+                total_bytes_r = total_bytes_r + nbr;
+                total_bytes_s = total_bytes_s + send(sockfd, file_content, nbr, MSG_DONTROUTE);
+                if ( !(total_bytes_s*100/total_bytes % 10) ) printf(SET_RED("%f..."), total_bytes_s*100./total_bytes);
             }
-            printf(SET_CYAN("%s\n"), msg);
+            printf(SET_RED("\nTotal bytes recv: %4d | sent: %4d\n"), total_bytes_r, total_bytes_s);
         }
     }    
     close(sockfd);
