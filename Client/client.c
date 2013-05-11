@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <netdb.h>
-#include "color_print.h"
+#include "../color_print.h"
 #include <math.h>
 
 #define MSGSIZE 2048
@@ -159,4 +159,3 @@ void removeSubstring(char *s, const char *toremove)
 { // remove substring from the string
     if ( (s = strstr(s, toremove)) ) memmove(s, (s + strlen(toremove)), (1 + strlen(s + strlen(toremove))));
 }
-
