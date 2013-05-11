@@ -11,8 +11,9 @@
 #include "../color_print.h"
 #include <math.h>
 
+#define NAMELEN 20
 #define MSGSIZE 2048
-#define FILEBUF 1448
+#define FILEBUF 16384
 
 #define NIPQUAD(addr) ((unsigned char *)&addr)[0], ((unsigned char *)&addr)[1], ((unsigned char *)&addr)[2], ((unsigned char *)&addr)[3]
 
@@ -48,8 +49,14 @@ int main(int argc, char *argv[])
                 {
                     memset(msg, '\0', MSGSIZE);
                     printf(SET_CYAN("Input: "));
+                    //1 -- INPUT BUFFER
                     if ( fgets(msg, MSGSIZE, stdin) )
                     {
+                        if ( strcmp(msg, "EXIT") ) 
+                        {
+                            write(sockfd, msg, strlen(msg));
+                            break;
+                        }
                         if ( strcasestr(msg, "FILE") )
                         {
                             FILE *fp;
@@ -66,29 +73,58 @@ int main(int argc, char *argv[])
                                 else {
                                     stat(fname, &file_stat);
                                     printf(SET_RED("Total file size in bytes: %5lld\n"), file_stat.st_size);
-                                    int block_send = (int)ceil(file_stat.st_size/(float)FILEBUF) + 1;
                                     strcpy(msg, strtok(msg, "\n"));
                                     sprintf(msg, "%s %lld", msg, file_stat.st_size);
                                     write(sockfd, msg, strlen(msg));
                                     memset(msg, '\0', MSGSIZE);
                                     memset(file_content, '\0', FILEBUF);
                                     int nbr=0, total_bytes_r=0, total_bytes_s=0;
-                                    while ( block_send )
+                                    while ( total_bytes_r < file_stat.st_size )
                                     {
                                         memset(file_content, '\0', FILEBUF);
                                         nbr = fread(file_content, 1, FILEBUF, fp);
                                         total_bytes_r = total_bytes_r + nbr;
-                                        total_bytes_s = total_bytes_s + send(sockfd, file_content, nbr, MSG_DONTROUTE);;
+                                        total_bytes_s = total_bytes_s + send(sockfd, file_content, nbr, MSG_DONTROUTE);
                                         if ( !(total_bytes_s*100/file_stat.st_size % 10) ) printf(SET_MAGENTA("%f..."), total_bytes_s*100./file_stat.st_size);
-                                        block_send = block_send - 1;
                                     }
                                     fclose(fp);
                                     printf(SET_RED("\nTotal bytes read: %4d | sent %4d\n"), total_bytes_r, total_bytes_s);
                                 }
                             }
+                        } else if ( strcasestr(msg, "ADDUSER") || strcasestr(msg, "CHANEXIT") ) {
+                            char tmp[MSGSIZE];
+                            memset(tmp, '\0', MSGSIZE);
+                            strcpy(tmp, msg);
+                            if ( !strcasecmp(strtok(tmp, " "), "CLIENT") )
+                            {
+                                if ( strcasestr(msg, "ADDUSER") )
+                                {
+                                    strtok(NULL, " ");
+                                    if ( strtok(NULL, " ") )
+                                    {
+                                        if ( strtok(NULL, " ") )
+                                        { // all good
+                                            write(sockfd, msg, strlen(msg));
+                                        } else {
+                                            printf(SET_RED("No channel was not passed in this message.\n"));
+                                        }
+                                    } else {
+                                        printf(SET_RED("An username was not passed in this message.\n"));
+                                    }
+                                } else {
+                                    strtok(NULL, " ");
+                                    if ( strtok(NULL, " ") )
+                                    { // all good
+                                        write(sockfd, msg, strlen(msg));
+                                    } else {
+                                        printf(SET_RED("No channel was not passed in this message.\n"));
+                                    }
+                                }
+                            } else {
+                                printf(SET_RED("'CLIENT' was not passed in this message.\n"));
+                            }
                         } else write(sockfd, msg, strlen(msg));
                     }
-                    if ( strcasestr(msg, "EXIT") ) break;
                 }
             } else {
                 // reading from the server
@@ -98,7 +134,7 @@ int main(int argc, char *argv[])
                     memset(msg, '\0', MSGSIZE);
                     read(sockfd, msg, MSGSIZE);
                     if ( strcasestr(msg, "FILE") )
-                    { // Sending files of size < 1MB & 40 characters or less in filename
+                    { // Sending files
                         FILE *fp;
                         char ext[5], fname[50];
                         removeSubstring(msg, "FILE ");
@@ -133,10 +169,10 @@ int main(int argc, char *argv[])
                         }
                     } else if ( !strcasecmp(msg, "VID") ) {
                         // Handle video feed here....
-                    } else if ( strcasestr(msg, "IM") ) { // all the rest are messages
+                    } else if ( strcasestr(msg, "IM") ) { // all the rest are messages //2 - OUPUT BUFFER
                         printf("%s%s%s", ANSI_COLOR_RED, msg, ANSI_COLOR_RESET);
                     }
-                    if ( strcasestr(msg, "EXIT") )
+                    if ( strcmp(msg, "EXIT") )
                     {
                         removeSubstring(msg, "EXIT ");
                         printf("%s\n", msg);
