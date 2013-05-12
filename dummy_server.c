@@ -13,7 +13,7 @@
 #include "color_print.h"
 
 #define MSGSIZE 2048
-#define FILEBUF 1448
+#define FILEBUF 16384
 
 #define NIPQUAD(addr) ((unsigned char *)&addr)[0], ((unsigned char *)&addr)[1], ((unsigned char *)&addr)[2], ((unsigned char *)&addr)[3]
 
@@ -158,13 +158,13 @@ void handle_request_client(int sockfd, char *addr)
         memset(msg, '\0', MSGSIZE);
         printf(SET_BLUE("Waiting for incoming msg from Client at %s...\n"), addr);
         if ( !read(sockfd, msg, MSGSIZE) ) break;
-        if ( strstr(msg, "EXIT") || strstr(msg, "exit") )
+        if ( !strncmp(msg, "EXIT", 4) )
         {
             memset(msg, '\0', MSGSIZE);
             sprintf(msg, "EXIT Connection terminated with server %s", addr);
             write(sockfd, msg, strlen(msg));
             break;
-        } else if ( strstr(msg, "FILE") ) {
+        } else if ( !strncmp(msg, "FILE", 4) ) {
             char s[MSGSIZE], file_content[FILEBUF];
             int total_bytes=0;
             write(sockfd, msg, strlen(msg));
@@ -184,8 +184,10 @@ void handle_request_client(int sockfd, char *addr)
                 if ( !(total_bytes_s*100/total_bytes % 10) ) printf(SET_RED("%f..."), total_bytes_s*100./total_bytes);
             }
             printf(SET_RED("\nTotal bytes recv: %4d | sent: %4d\n"), total_bytes_r, total_bytes_s);
+        } else {
+            write(sockfd, msg, strlen(msg));
         }
-    }    
+    }
     close(sockfd);
     printf(SET_CYAN("Connection terminated with Client %s\n"), addr);
 }
