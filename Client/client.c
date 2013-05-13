@@ -41,7 +41,9 @@ int main(int argc, char *argv[])
             inet_ntop(AF_INET, &(address.sin_addr), str, INET_ADDRSTRLEN);
             printf(SET_GREEN("Connection established with Server: %s\n"), str);
             memset(msg, '\0', MSGSIZE);
-            sprintf(msg, "CLIENT");
+            printf("Input username: ");
+            while ( !fgets(msg, MSGSIZE, stdin) );
+            sprintf(msg, "CLIENT REGISTERUSER %s", msg);
             write(sockfd, msg, strlen(msg));
             if ( !fork() )
             {   // writing to the server
@@ -52,12 +54,12 @@ int main(int argc, char *argv[])
                     //1 -- INPUT BUFFER
                     if ( fgets(msg, MSGSIZE, stdin) )
                     {
-                        if ( strcmp(msg, "EXIT") ) 
+                        if ( !strncmp(msg, "EXIT", 4) ) 
                         {
                             write(sockfd, msg, strlen(msg));
                             break;
                         }
-                        if ( strcasestr(msg, "FILE") )
+                        if ( !strncmp(msg, "FILE", 4) )
                         {
                             FILE *fp;
                             struct stat file_stat;
@@ -123,7 +125,9 @@ int main(int argc, char *argv[])
                             } else {
                                 printf(SET_RED("'CLIENT' was not passed in this message.\n"));
                             }
-                        } else write(sockfd, msg, strlen(msg));
+                        } else {
+                            write(sockfd, msg, strlen(msg));
+                        }
                     }
                 }
             } else {
@@ -133,7 +137,13 @@ int main(int argc, char *argv[])
                 {
                     memset(msg, '\0', MSGSIZE);
                     read(sockfd, msg, MSGSIZE);
-                    if ( strcasestr(msg, "FILE") )
+                    if ( !strncmp(msg, "EXIT", 4) )
+                    {
+                        removeSubstring(msg, "EXIT ");
+                        printf("%s\n", msg);
+                        break;
+                    }
+                    if ( !strncmp(msg, "FILE", 4) )
                     { // Sending files
                         FILE *fp;
                         char ext[5], fname[50];
@@ -167,16 +177,10 @@ int main(int argc, char *argv[])
                             fclose(fp);
                             printf(SET_RED("\nTotal bytes recv: %4d | written: %4d\n"), total_bytes_r, total_bytes_s);
                         }
-                    } else if ( !strcasecmp(msg, "VID") ) {
+                    } else if ( !strncmp(msg, "VID", 3) ) {
                         // Handle video feed here....
-                    } else if ( strcasestr(msg, "IM") ) { // all the rest are messages //2 - OUPUT BUFFER
+                    } else if ( strlen(msg) > 1 ) { // all the rest are messages //2 - OUPUT BUFFER
                         printf("%s%s%s", ANSI_COLOR_RED, msg, ANSI_COLOR_RESET);
-                    }
-                    if ( strcmp(msg, "EXIT") )
-                    {
-                        removeSubstring(msg, "EXIT ");
-                        printf("%s\n", msg);
-                        break;
                     }
                 }
             }
