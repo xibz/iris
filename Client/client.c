@@ -41,7 +41,9 @@ int main(int argc, char *argv[])
             inet_ntop(AF_INET, &(address.sin_addr), str, INET_ADDRSTRLEN);
             printf(SET_GREEN("Connection established with Server: %s\n"), str);
             memset(msg, '\0', MSGSIZE);
-            sprintf(msg, "CLIENT");
+            printf("Input username: ");
+            while ( !fgets(msg, MSGSIZE, stdin) );
+            sprintf(msg, "CLIENT REGISTERUSER %s", msg);
             write(sockfd, msg, strlen(msg));
             if ( !fork() )
             {   // writing to the server

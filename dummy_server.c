@@ -129,7 +129,8 @@ void start_server()
 
                         char str[INET_ADDRSTRLEN];
                         inet_ntop(AF_INET, &(in_addr.sin_addr), str, INET_ADDRSTRLEN);
-                        if ( !strcasecmp(msg, "CLIENT") )
+                        printf("%s\n", msg);
+                        if ( !strncmp(msg, "CLIENT", 5) )
                         { // if client, fork and handle the requests
                             printf(SET_BLUE("Connection established with Client: %s\n"), str);
                             if ( !fork() )
