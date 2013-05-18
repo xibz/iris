@@ -4,6 +4,7 @@
 #include "Menubar.h"
 #include "chatBox.h"
 #include "About.h"
+#include "../Client/client.h"
 #include "connectWindow.h"
 bool buttonPress(GtkWidget *, GdkEvent *);
 void menuItemResponse(char*);
@@ -41,6 +42,11 @@ int main(int argc, char *argv[])
     G_CALLBACK(showAbout), (gpointer)window);
 
   gtk_widget_show_all(window);
+  pthread_t thread;
+  //thread client
+  //Probably should call runClient on connect
+  pthread_create(&thread, NULL, (void *)&runClient, (void *)&cbox);
+  pthread_create(&thread, NULL, (void *)&readMsgs, (void *)&cbox);
   gtk_main();
   return 0;
 }

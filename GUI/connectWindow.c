@@ -1,14 +1,19 @@
 #include "connectWindow.h"
+#include "../Client/client.h"
 #include <gtk-3.0/gtk/gtk.h>
+#define SERVERMAX 256
+#define PORTMAX 10
 void newConnection(GtkWidget *pWindow)
 {
   /////MEHHHHH, use a table///////
-  GtkWidget *popupWindow, *connect, *grid;
+  GtkWidget *popupWindow, *connect, *grid, *server, *port;
+  server = gtk_text_view_new();
   popupWindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   connect = gtk_button_new_with_label("Connect");
   grid = gtk_grid_new();
   gtk_container_add(GTK_CONTAINER(popupWindow), grid);
   gtk_grid_attach(GTK_GRID(grid), connect, 0, 0, 1, 1);
+  gtk_grid_attach(GTK_GRID(grid), server, 0, 1, 1, 2);
   gtk_window_set_title(GTK_WINDOW(popupWindow), "Connect to Server");
   gtk_container_set_border_width(GTK_CONTAINER(popupWindow), 10);
   gtk_window_set_resizable(GTK_WINDOW(popupWindow), FALSE);
