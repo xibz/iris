@@ -34,7 +34,8 @@ void readMsgs(Chatbox *cbox)
   {
       int sockfd = cbox->sockfd;
       printf("sock readMsg %d\n", sockfd);
-      pthread_mutex_lock(&cbox->m);
+      //pthread_mutex_lock(&cbox->m);
+      printf("Here\n");
       memset(msg, '\0', MSGSIZE);
       read(sockfd, msg, MSGSIZE);
       if(strlen(msg))
@@ -136,7 +137,7 @@ void readMsgs(Chatbox *cbox)
             gtk_text_buffer_insert(b, &end, buffer, -1); 
      	 }
     }
-    pthread_mutex_unlock(&cbox->m);
+    //pthread_mutex_unlock(&cbox->m);
   }
 }
 
@@ -161,7 +162,7 @@ void update_userlist(Chatbox *cbox, struct chan_struct chan[])
 
 void parseInput(Chatbox *cbox)
 {
-  pthread_mutex_lock(&cbox->m);
+  //pthread_mutex_lock(&cbox->m);
   char buffer[2048]="\n";
   int sockfd = cbox->sockfd;
   printf("sock parseInput %d\n", sockfd);
@@ -295,7 +296,7 @@ void parseInput(Chatbox *cbox)
         }
     }
   }
-  pthread_mutex_unlock(&cbox->m);
+  //pthread_mutex_unlock(&cbox->m);
 }
 
 int runClient(Chatbox *cbox)
@@ -327,7 +328,7 @@ int runClient(Chatbox *cbox)
             GtkTextBuffer *b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(cbox->dispText));
             strcat(buffer, str);
             gtk_text_buffer_set_text(b, buffer, strlen(buffer));
-            close(sockfd); 
+            //close(sockfd); 
         }
     }
 

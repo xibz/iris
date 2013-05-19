@@ -16,6 +16,8 @@ int main(int argc, char *argv[])
   GtkWidget *grid;
   Menubar mBar;
   Chatbox cbox;
+  g_thread_init(NULL);
+  gdk_threads_init();
   gtk_init(&argc, &argv);
   window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
@@ -48,8 +50,13 @@ int main(int argc, char *argv[])
 
   //pthread_create(&thread[0], NULL, (void *)&runClient, (void *)&cbox);
   runClient(&cbox);
+  gdk_threads_enter();
   pthread_create(&thread[1], NULL, (void *)&readMsgs, (void *)&cbox);
+  gdk_threads_leave();
+
+  gdk_threads_enter();
   gtk_main();
+  gdk_threads_leave();
   //Meh, could have made this exit nicer
   exit(0);
   return 0;
