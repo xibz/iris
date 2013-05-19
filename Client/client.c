@@ -14,11 +14,14 @@
 #include <gtk-3.0/gtk/gtk.h>
 #include "client.h"
 
-#define NAMELEN 20
+#define NAMELEN 100
+#define MAX_CHANNELS 10
+#define MAX_USERS_PER_CHANNEL 10
 #define MSGSIZE 1024
 #define FILEBUF 900
 
 #define NIPQUAD(addr) ((unsigned char *)&addr)[0], ((unsigned char *)&addr)[1], ((unsigned char *)&addr)[2], ((unsigned char *)&addr)[3]
+
 void readMsgs(Chatbox *cbox)
 {
   char buffer[2048]="";
@@ -33,108 +36,139 @@ void readMsgs(Chatbox *cbox)
       pthread_mutex_lock(&cbox->m);
       memset(msg, '\0', MSGSIZE);
       read(sockfd, msg, MSGSIZE);
-      printf("msg_here:%s\n", msg);
-      if ( !strncmp(msg, "QUITUSER", 8) )
+      if(strlen(msg))
       {
-          printf("%s\n", msg);
-          break;
-      }
-      if ( !strncmp(msg, "FILE", 4) )
-      { // Sending files
-          FILE *fp;
-          char ext[5], fname[50];
-          removeSubstring(msg, "FILE ");
-          strcpy(ext, strtok(msg, " "));
-          strcpy(fname, strtok(NULL, " "));
-          int total_bytes = atoi(strtok(NULL, " \n"));
-          sprintf(buffer, "Total bytes expecting: %5d\n", total_bytes);
-          gtk_text_buffer_get_end_iter(b, &end);
-          gtk_text_buffer_insert(b, &end, buffer, -1); 
-          printf("Total bytes expecting: %5d\n", total_bytes);
-          if ( !access(fname, F_OK) )
-          {
-              removeSubstring(fname, ".");
-              removeSubstring(fname, ext);
-              sprintf(fname, "%s_tmp.%s", fname, ext);
-              if( remove(fname) != 0 ) perror("Error deleting file");
-              else
-              {
-                strcpy(buffer, "File successfully deleted\n");
-                gtk_text_buffer_get_end_iter(b, &end);
-                gtk_text_buffer_insert(b, &end, buffer, -1); 
-                puts("File successfully deleted");
-              }
-              if ( !(fp = fopen(fname, "wb")) )
-              {
-                sprintf(buffer, "Error creating the file: %s\n", fname);
-                gtk_text_buffer_get_end_iter(b, &end);
-                gtk_text_buffer_insert(b, &end, buffer, -1); 
-                printf("Error creating the file: %s\n", fname);
-              }
-          } else {
-              if ( !(fp = fopen(fname, "wb")) )
-              {
-                sprintf(buffer, "Error creating the file: %s\n", fname);
-                gtk_text_buffer_get_end_iter(b, &end);
-                gtk_text_buffer_insert(b, &end, buffer, -1); 
-                printf("Error creating the file: %s\n", fname);
-              }
-          }
-          if ( fp )
-          {
-              int nbr=0, total_bytes_r=0, total_bytes_s=0, i;
-              while ( total_bytes_s < total_bytes )
-              {
-                  memset(msg, '\0', MSGSIZE);
-                  nbr = read(sockfd, msg, MSGSIZE) - 5;
-                  if ( nbr > 0 )
-                  {
-                      removeSubstring(msg, "FILE ");
-                      sprintf(buffer, "MSGRECV:%d:%s\n", nbr, msg);
-                      gtk_text_buffer_get_end_iter(b, &end);
-                      gtk_text_buffer_insert(b, &end, buffer, -1); 
-                      printf("MSGRECV:%d:%s\n", nbr, msg);
-                      total_bytes_r = total_bytes_r + nbr;
-                      for ( i=0; i<nbr; ++i ) total_bytes_s = total_bytes_s + fprintf(fp, "%c", msg[i]);
-                      if ( !(total_bytes_s*100/total_bytes % 10) )
-                      {
-                        sprintf(buffer, "%f...", total_bytes_s*100./total_bytes);
+        printf("msg_here:%s\n", msg);
+        if ( !strncmp(msg, "QUITUSER", 8) )
+        {
+            printf("%s\n", msg);
+            break;
+        }
+        if ( !strncmp(msg, "FILE", 4) )
+        { // Sending files
+            FILE *fp;
+            char ext[5], fname[50];
+            removeSubstring(msg, "FILE ");
+            strcpy(ext, strtok(msg, " "));
+            strcpy(fname, strtok(NULL, " "));
+            int total_bytes = atoi(strtok(NULL, " \n"));
+            sprintf(buffer, "Total bytes expecting: %5d\n", total_bytes);
+            gtk_text_buffer_get_end_iter(b, &end);
+            gtk_text_buffer_insert(b, &end, buffer, -1); 
+            printf("Total bytes expecting: %5d\n", total_bytes);
+            if ( !access(fname, F_OK) )
+            {
+                removeSubstring(fname, ".");
+                removeSubstring(fname, ext);
+                sprintf(fname, "%s_tmp.%s", fname, ext);
+                if( remove(fname) != 0 ) perror("Error deleting file");
+                else
+                {
+                  strcpy(buffer, "File successfully deleted\n");
+                  gtk_text_buffer_get_end_iter(b, &end);
+                  gtk_text_buffer_insert(b, &end, buffer, -1); 
+                  puts("File successfully deleted");
+                }
+                if ( !(fp = fopen(fname, "wb")) )
+                {
+                  sprintf(buffer, "Error creating the file: %s\n", fname);
+                  gtk_text_buffer_get_end_iter(b, &end);
+                  gtk_text_buffer_insert(b, &end, buffer, -1); 
+                  printf("Error creating the file: %s\n", fname);
+                }
+            } else {
+                if ( !(fp = fopen(fname, "wb")) )
+                {
+                  sprintf(buffer, "Error creating the file: %s\n", fname);
+                  gtk_text_buffer_get_end_iter(b, &end);
+                  gtk_text_buffer_insert(b, &end, buffer, -1); 
+                  printf("Error creating the file: %s\n", fname);
+                }
+            }
+            if ( fp )
+            {
+                int nbr=0, total_bytes_r=0, total_bytes_s=0, i;
+                while ( total_bytes_s < total_bytes )
+                {
+                    memset(msg, '\0', MSGSIZE);
+                    nbr = read(sockfd, msg, MSGSIZE) - 5;
+                    if ( nbr > 0 )
+                    {
+                        removeSubstring(msg, "FILE ");
+                        sprintf(buffer, "MSGRECV:%d:%s\n", nbr, msg);
                         gtk_text_buffer_get_end_iter(b, &end);
                         gtk_text_buffer_insert(b, &end, buffer, -1); 
-                        printf("%f...", total_bytes_s*100./total_bytes);
-                      }
-                  } else {
-                      break;
-                  }
-              }
-              fclose(fp);
-              sprintf(buffer, "\nTotal bytes recv: %4d | written: %4d\n", total_bytes_r, total_bytes_s);
-              gtk_text_buffer_get_end_iter(b, &end);
-              gtk_text_buffer_insert(b, &end, buffer, -1); 
-              printf("\nTotal bytes recv: %4d | written: %4d\n", total_bytes_r, total_bytes_s);
-          }
-      } else if ( !strncmp(msg, "VID", 3) ) {
-          // Handle video feed here....
-      } else if ( strlen(msg) > 1 ) { // all the rest are messages //2 - OUPUT BUFFER
-          strcpy(buffer, msg);
-          gtk_text_buffer_get_end_iter(b, &end);
-          gtk_text_buffer_insert(b, &end, buffer, -1); 
-          printf("msg recv:%s", msg);
-      }
+                        printf("MSGRECV:%d:%s\n", nbr, msg);
+                        total_bytes_r = total_bytes_r + nbr;
+                        for ( i=0; i<nbr; ++i ) total_bytes_s = total_bytes_s + fprintf(fp, "%c", msg[i]);
+                        if ( !(total_bytes_s*100/total_bytes % 10) )
+                        {
+                          sprintf(buffer, "%f...", total_bytes_s*100./total_bytes);
+                          gtk_text_buffer_get_end_iter(b, &end);
+                          gtk_text_buffer_insert(b, &end, buffer, -1); 
+                          printf("%f...", total_bytes_s*100./total_bytes);
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                fclose(fp);
+                sprintf(buffer, "\nTotal bytes recv: %4d | written: %4d\n", total_bytes_r, total_bytes_s);
+                gtk_text_buffer_get_end_iter(b, &end);
+                gtk_text_buffer_insert(b, &end, buffer, -1); 
+                printf("\nTotal bytes recv: %4d | written: %4d\n", total_bytes_r, total_bytes_s);
+            }
+        } else if ( !strncmp(msg, "VID", 3) ) {
+            // Handle video feed here....
+        } else { // all the rest are messages //2 - OUPUT BUFFER
+            printf("msg recv:%s", msg);
+            if ( !strncmp(msg, "ADDUSER", 7) || !strncmp(msg, "JOINCHANNEL", 11) || !strncmp(msg, "LEAVECHANNEL", 12) || !strncmp(msg, "CREATECHANNEL", 13) ) msg[strchr(msg, '\n') - msg] = ' ';
+            if ( !strncmp(msg, "USER JOINED", 11) || !strncmp(msg, "USER LEFT", 9) ) 
+            {
+                msg[strchr(msg, '\n') - msg] = ' ';
+                msg[strchr(msg, '\n') - msg] = ' ';
+            }
+            parse_chan_user(msg);
+            update_userlist(cbox, chan);
+            strcpy(buffer, msg);
+            gtk_text_buffer_get_end_iter(b, &end);
+            gtk_text_buffer_insert(b, &end, buffer, -1); 
+     	 }
+    }
     pthread_mutex_unlock(&cbox->m);
   }
 }
+
+void update_userlist(Chatbox *cbox, struct chan_struct chan[])
+{
+  GtkTextIter start, end;
+  GtkTextBuffer *b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(cbox->userlist));
+  gtk_text_buffer_set_text(b, " Userlist:\n", strlen(" Userlist:\n"));
+  int i, j;
+  for(i = 0; i < MAX_CHANNELS; ++i)
+  {
+    for(j = 0; j < MAX_USERS_PER_CHANNEL; ++j)
+    {
+      gtk_text_buffer_get_end_iter(b, &end);
+      char userName[NAMELEN+3];
+      strcpy(userName, chan[i].users[j]);
+      strcat(userName, "\n");
+      gtk_text_buffer_insert(b, &end, userName, -1); 
+    }
+  }
+}
+
 void parseInput(Chatbox *cbox)
 {
   pthread_mutex_lock(&cbox->m);
   char buffer[2048]="\n";
   int sockfd = cbox->sockfd;
+  char chan_tmp[NAMELEN];
   GtkTextIter start, end;
   GtkTextBuffer *b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(cbox->dispText));
   GtkTextBuffer *textBuffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(cbox->text));
   gtk_text_buffer_get_bounds(textBuffer, &start, &end);
   char *msg = gtk_text_buffer_get_text(textBuffer, &start, &end, FALSE);
-  char chan[2048];
   gtk_text_buffer_get_end_iter(b, &end);
   strcat(buffer, msg);
   gtk_text_buffer_insert(b, &end, buffer, 0); 
@@ -166,8 +200,8 @@ void parseInput(Chatbox *cbox)
               gtk_text_buffer_insert(b, &end, buffer, -1); 
           }
       } else if ( !strncmp(msg, "JOINCHANNEL", 11) || !strncmp(msg, "LEAVECHANNEL", 12) || !strncmp(msg, "CREATECHANNEL", 13) ) {
-          strcpy(chan, strtok(NULL, " \n"));
-          if ( chan )
+          strcpy(chan_tmp, strtok(NULL, " \n"));
+          if ( chan_tmp )
           {// all good
               msg[strlen(cmd)] = '\n';
               write(sockfd, msg, strlen(msg));
@@ -177,7 +211,6 @@ void parseInput(Chatbox *cbox)
               gtk_text_buffer_insert(b, &end, buffer, -1); 
               printf("No channel was not passed in this message.\n");
           }
-          if ( !strncmp(msg, "LEAVECHANNEL", 12) ) memset(chan, '\0', MSGSIZE);
       } else if ( !strncmp(msg, "BROADCAST", 9) ) {
           if ( strtok(NULL, " ") )
           {
@@ -263,13 +296,19 @@ void parseInput(Chatbox *cbox)
   pthread_mutex_unlock(&cbox->m);
 }
 
-
 int runClient(Chatbox *cbox)
 {
     signal(SIGCHLD, SIG_IGN);
     int sockfd, PORT;
-    char ADDR[256] = "127.0.0.1", msg[MSGSIZE], str[INET_ADDRSTRLEN], chan[MSGSIZE];
+    char ADDR[256] = "127.0.0.1", msg[MSGSIZE], str[INET_ADDRSTRLEN];
     struct sockaddr_in address;
+
+    int i, j;
+    for ( i=0; i<MAX_CHANNELS; ++i )
+    {
+      chan[i].inUse = 0;
+      for ( j=0; j<MAX_USERS_PER_CHANNEL; ++j ) memset(chan[i].users[j], '\0', NAMELEN);
+    }
 
     PORT = 7000;
     char buffer[2048] = "Connection established with server: ";
@@ -291,6 +330,115 @@ int runClient(Chatbox *cbox)
         }
     }
     return 1;
+}
+
+void parse_chan_user(char msg[MSGSIZE])
+{
+  char tmp[MSGSIZE], s[MSGSIZE];
+  int i, j, k;
+  strcpy(tmp, msg);
+  if ( !strncmp(msg, "CREATECHANNEL", 13) )
+  {
+    strtok(tmp, " ");
+    strtok(NULL, " ");
+    strcpy(s, strtok(NULL, " "));
+    if ( !strcmp(s, "SUCCESS") )
+    {
+      for ( i=0; i<MAX_CHANNELS; ++i )
+      {
+        if ( !chan[i].inUse )
+        {
+          chan[i].inUse = 1;
+          strcpy(chan[i].name, strtok(NULL, " \n"));
+          break;
+        }
+      }
+    }    
+  } else if ( !strncmp(msg, "JOINCHANNEL", 11) ) {
+    strtok(tmp, " ");
+    strtok(NULL, " ");
+    strcpy(s, strtok(NULL, " "));
+    if ( !strcmp(s, "SUCCESS") )
+    {
+      memset(s, '\0', MSGSIZE);
+      strcpy(s, strtok(NULL, " "));
+      for ( i=0; i<MAX_CHANNELS; ++i )
+      {
+        if ( !chan[i].inUse )
+        {
+          strcpy(chan[i].name, s);
+          for ( j=0; j<MAX_USERS_PER_CHANNEL; ++j )
+          {
+            if ( !strlen(chan[i].users[j]) )
+            {
+              int nusers = atoi(strtok(NULL, " "));
+              for ( k=0; k<nusers; ++k, ++j ) strcpy(chan[i].users[j], strtok(NULL, " \n"));
+              break;
+            }
+          }
+          break;
+        }
+      }
+    }
+  } else if ( !strncmp(msg, "USER JOINED", 11) ) {
+    strtok(tmp, " ");
+    strtok(NULL, " ");
+    strcpy(s, strtok(NULL, " "));
+    for ( i=0; i<MAX_CHANNELS; ++i )
+    {
+      if ( !strcmp(chan[i].name, s) )
+      {
+        for ( j=0; j<MAX_USERS_PER_CHANNEL; ++j )
+        {
+          if ( !strlen(chan[i].users[j]) )
+          {
+            strcpy(chan[i].users[j], strtok(NULL, " \n"));
+            break;
+          }
+        }
+        break;
+      }
+    }
+  } else if ( !strncmp(msg, "LEAVECHANNEL", 12) ) {
+    strtok(tmp, " ");
+    strtok(NULL, " ");
+    strcpy(s, strtok(NULL, " "));
+    if ( !strcmp(s, "SUCCESS") )
+    {
+        memset(s, '\0', MSGSIZE);
+        strcpy(s, strtok(NULL, " \n"));
+      for ( i=0; i<MAX_CHANNELS; ++i )
+      {
+        if ( !strcmp(chan[i].name, s) )
+        {
+          for ( j=0; j<MAX_USERS_PER_CHANNEL; ++j ) if ( strlen(chan[i].users[j]) ) memset(chan[i].users[j], '\0', NAMELEN);
+          chan[i].inUse = 0;
+          break;
+        }
+      }
+    }
+  } else if ( !strncmp(msg, "USER LEFT", 9) ) {
+    strtok(tmp, " ");
+    strtok(NULL, " ");
+    strcpy(s, strtok(NULL, " "));
+    for ( i=0; i<MAX_CHANNELS; ++i )
+    {
+      if ( !strcmp(chan[i].name, s) )
+      {
+        memset(s, '\0', MSGSIZE);
+        strcpy(s, strtok(NULL, " "));
+        for ( j=0; j<MAX_USERS_PER_CHANNEL; ++j )
+        {
+          if ( !strcmp(chan[i].users[j], s) )
+          {
+            memset(chan[i].users[j], '\0', NAMELEN);
+            break;
+          }
+        }
+        break;
+      }
+    }
+  }
 }
 
 void removeAllSubstring(char *s, const char *toremove)

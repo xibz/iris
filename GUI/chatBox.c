@@ -3,11 +3,12 @@
 #include <gdk/gdkkeysyms.h>
 #include "../Client/client.h"
 #include <pthread.h>
+#include <string.h>
 void initChatbox(Chatbox *cbox)
 {
   pthread_mutex_init(&cbox->m, NULL);
-  cbox->userBox = gtk_frame_new("User list:");
   cbox->scrollbox = gtk_scrolled_window_new(NULL, NULL);
+  cbox->userBox = gtk_scrolled_window_new(NULL, NULL);
   cbox->display = gtk_scrolled_window_new(NULL, NULL);
   //gtk_frame_set_shadow_type(GTK_FRAME(cbox->display), GTK_SHADOW_IN);
   //gtk_frame_set_shadow_type(GTK_FRAME(cbox->userBox), GTK_SHADOW_IN);
@@ -19,12 +20,18 @@ void initChatbox(Chatbox *cbox)
   gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(cbox->text), GTK_WRAP_CHAR);
   gtk_text_view_set_editable(GTK_TEXT_VIEW(cbox->text), TRUE);
 
+  cbox->userlist = gtk_text_view_new();
+  gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(cbox->userlist), GTK_WRAP_CHAR);
+  gtk_text_view_set_editable(GTK_TEXT_VIEW(cbox->userlist), FALSE);
+  gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(cbox->userlist), FALSE);
+
   cbox->dispText = gtk_text_view_new();
   gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(cbox->dispText), GTK_WRAP_CHAR);
   gtk_text_view_set_editable(GTK_TEXT_VIEW(cbox->dispText), FALSE);
   gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(cbox->dispText), FALSE);
   gtk_container_add(GTK_CONTAINER(cbox->display), cbox->dispText);
   gtk_container_add(GTK_CONTAINER(cbox->scrollbox), cbox->text);
+  gtk_container_add(GTK_CONTAINER(cbox->userBox), cbox->userlist);
 
   gtk_table_attach_defaults(GTK_TABLE(cbox->table), cbox->display,
                             0, 1, 0, 1);
@@ -35,6 +42,10 @@ void initChatbox(Chatbox *cbox)
   gtk_widget_set_size_request(cbox->display, 200, 400);
   gtk_widget_set_hexpand(cbox->display, TRUE);
   gtk_widget_set_hexpand(cbox->text, TRUE);
+
+  GtkTextBuffer *b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(cbox->userlist));
+  gtk_text_buffer_set_text(b, " Userlist:\n", strlen(" Userlist:\n"));
+
   g_signal_connect(cbox->text, "key_press_event", G_CALLBACK(on_key_press), cbox);
 }
 

@@ -12,6 +12,7 @@ typedef struct Chatbox
   GtkWidget *userBox;
   GtkWidget *scrollbox;
   GtkWidget *displayBox;
+  GtkWidget *userlist;
   int sockfd;
   pthread_mutex_t m;
 }Chatbox;

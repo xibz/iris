@@ -42,11 +42,13 @@ int main(int argc, char *argv[])
     G_CALLBACK(showAbout), (gpointer)window);
 
   gtk_widget_show_all(window);
-  pthread_t thread;
+  pthread_t thread[2];
   //thread client
   //Probably should call runClient on connect
-  pthread_create(&thread, NULL, (void *)&runClient, (void *)&cbox);
-  pthread_create(&thread, NULL, (void *)&readMsgs, (void *)&cbox);
+  pthread_create(&thread[0], NULL, (void *)&runClient, (void *)&cbox);
+  pthread_create(&thread[1], NULL, (void *)&readMsgs, (void *)&cbox);
   gtk_main();
+  //Meh, could have made this exit nicer
+  exit(0);
   return 0;
 }
