@@ -29,10 +29,11 @@ void readMsgs(Chatbox *cbox)
   GtkTextBuffer *b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(cbox->dispText));
   GtkTextBuffer *textBuffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(cbox->text));
   gtk_text_buffer_get_bounds(textBuffer, &start, &end);
-  int sockfd = cbox->sockfd;
   char msg[MSGSIZE];
   while ( 1 )
   {
+      int sockfd = cbox->sockfd;
+      printf("sock readMsg %d\n", sockfd);
       pthread_mutex_lock(&cbox->m);
       memset(msg, '\0', MSGSIZE);
       read(sockfd, msg, MSGSIZE);
@@ -163,6 +164,7 @@ void parseInput(Chatbox *cbox)
   pthread_mutex_lock(&cbox->m);
   char buffer[2048]="\n";
   int sockfd = cbox->sockfd;
+  printf("sock parseInput %d\n", sockfd);
   char chan_tmp[NAMELEN];
   GtkTextIter start, end;
   GtkTextBuffer *b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(cbox->dispText));
@@ -321,7 +323,6 @@ int runClient(Chatbox *cbox)
 
         if ( connect(sockfd, (struct sockaddr *)&address, sizeof(address)) < 0 ) perror("Connection Error");
         else {
-            cbox->sockfd = sockfd;
             inet_ntop(AF_INET, &(address.sin_addr), str, INET_ADDRSTRLEN);
             GtkTextBuffer *b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(cbox->dispText));
             strcat(buffer, str);
@@ -329,6 +330,11 @@ int runClient(Chatbox *cbox)
             close(sockfd); 
         }
     }
+
+    cbox->sockfd = sockfd;
+    printf("cboxfd %d sockfd %d\n", cbox->sockfd, sockfd);
+    //pthread_mutex_unlock(&cbox->sockCheck);
+  
     return 1;
 }
 

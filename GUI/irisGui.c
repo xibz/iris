@@ -45,7 +45,9 @@ int main(int argc, char *argv[])
   pthread_t thread[2];
   //thread client
   //Probably should call runClient on connect
-  pthread_create(&thread[0], NULL, (void *)&runClient, (void *)&cbox);
+
+  //pthread_create(&thread[0], NULL, (void *)&runClient, (void *)&cbox);
+  runClient(&cbox);
   pthread_create(&thread[1], NULL, (void *)&readMsgs, (void *)&cbox);
   gtk_main();
   //Meh, could have made this exit nicer

@@ -58,7 +58,6 @@ gboolean on_key_press(GtkWidget *widget, GdkEventKey *pKey, Chatbox *cbox)
     {
       case 65293:
         printf("ENTER\n");
-        cbox->sockfd = 2556;
         parseInput(cbox);
         {
           GtkTextBuffer *b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(cbox->text));

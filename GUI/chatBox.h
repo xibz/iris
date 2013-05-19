@@ -13,8 +13,8 @@ typedef struct Chatbox
   GtkWidget *scrollbox;
   GtkWidget *displayBox;
   GtkWidget *userlist;
-  int sockfd;
-  pthread_mutex_t m;
+  const int *sockfd;
+  pthread_mutex_t m;//, sockCheck;
 }Chatbox;
 void initChatbox(Chatbox *);
 gboolean on_key_press(GtkWidget *, GdkEventKey *, Chatbox *);
