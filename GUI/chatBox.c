@@ -6,7 +6,6 @@
 #include <string.h>
 void initChatbox(Chatbox *cbox)
 {
-  pthread_mutex_init(&cbox->m, NULL);
   cbox->scrollbox = gtk_scrolled_window_new(NULL, NULL);
   cbox->userBox = gtk_scrolled_window_new(NULL, NULL);
   cbox->display = gtk_scrolled_window_new(NULL, NULL);
@@ -46,14 +45,15 @@ void initChatbox(Chatbox *cbox)
   GtkTextBuffer *b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(cbox->userlist));
   gtk_text_buffer_set_text(b, " Userlist:\n", strlen(" Userlist:\n"));
 
+  gdk_threads_enter();
   g_signal_connect(cbox->text, "key_press_event", G_CALLBACK(on_key_press), cbox);
+  gdk_threads_leave();
 }
 
 gboolean on_key_press(GtkWidget *widget, GdkEventKey *pKey, Chatbox *cbox)
 {
   if(pKey->type == GDK_KEY_PRESS)
   {
-    pthread_t thread;
     switch(pKey->keyval)
     {
       case 65293:

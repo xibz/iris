@@ -303,7 +303,7 @@ int runClient(Chatbox *cbox)
 {
     signal(SIGCHLD, SIG_IGN);
     int sockfd, PORT;
-    char ADDR[256] = "127.0.0.1", msg[MSGSIZE], str[INET_ADDRSTRLEN];
+    char ADDR[256] = "java.cs.unlv.edu", msg[MSGSIZE], str[INET_ADDRSTRLEN];
     struct sockaddr_in address;
 
     int i, j;
@@ -313,7 +313,7 @@ int runClient(Chatbox *cbox)
       for ( j=0; j<MAX_USERS_PER_CHANNEL; ++j ) memset(chan[i].users[j], '\0', NAMELEN);
     }
 
-    PORT = 7000;
+    PORT = 20001;
     char buffer[2048] = "Connection established with server: ";
  
     if ( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) perror("Socket Error");
